@@ -1,0 +1,5 @@
+build:
+  docker:
+    worker: Dockerfile
+run:
+  worker: /usr/local/bin/entrypoint.sh
