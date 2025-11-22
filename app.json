@@ -6,43 +6,43 @@
   "formation": {
     "worker1": {
       "quantity": 1,
-      "size": "basic"
+      "size": "standard-2x"
     },
     "worker2": {
       "quantity": 1,
-      "size": "basic"
+      "size": "standard-2x"
     },
     "worker3": {
       "quantity": 1,
-      "size": "basic"
+      "size": "standard-2x"
     },
     "worker4": {
       "quantity": 1,
-      "size": "basic"
+      "size": "standard-2x"
     },
     "worker5": {
       "quantity": 1,
-      "size": "basic"
+      "size": "standard-2x"
     },
     "worker6": {
       "quantity": 1,
-      "size": "basic"
+      "size": "standard-2x"
     },
     "worker7": {
       "quantity": 1,
-      "size": "basic"
+      "size": "standard-2x"
     },
     "worker8": {
       "quantity": 1,
-      "size": "basic"
+      "size": "standard-2x"
     },
     "worker9": {
       "quantity": 1,
-      "size": "basic"
+      "size": "standard-2x"
     },
     "worker0": {
       "quantity": 1,
-      "size": "basic"
+      "size": "standard-2x"
     }
   },
   "environments": {}
