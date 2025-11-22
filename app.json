@@ -1,0 +1,13 @@
+{
+  "name": "Nexus ",
+  "description": "Scalable Nexus.",
+  "keywords": [],
+  "stack": "container",
+  "formation": {
+    "worker": {
+      "quantity": 10,
+      "size": "basic"
+    }
+  },
+  "environments": {}
+}
