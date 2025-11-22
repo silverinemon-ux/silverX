@@ -4,7 +4,7 @@
   "keywords": [],
   "stack": "container",
   "formation": {
-    "worker1": {
+    "worker": {
       "quantity": 1,
       "size": "standard-2x"
     }
