@@ -1,13 +1,49 @@
 {
   "name": "Nexus ",
-  "description": "Scalable Nexus.",
+  "description": "Nexus.",
   "keywords": [],
   "stack": "container",
   "formation": {
     "worker": {
       "quantity": 1,
       "size": "basic"
-    }
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    },
   },
   "environments": {}
 }
