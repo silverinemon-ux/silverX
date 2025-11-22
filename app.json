@@ -6,7 +6,7 @@
   "formation": {
     "worker": {
       "quantity": 1,
-      "size": "performance-l"
+      "size": "standard-2x"
     }
   },
   "environments": {}
