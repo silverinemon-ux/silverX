@@ -4,43 +4,43 @@
   "keywords": [],
   "stack": "container",
   "formation": {
-    "worker": {
+    "worker1": {
       "quantity": 1,
       "size": "basic"
     },
-    "worker": {
+    "worker2": {
       "quantity": 1,
       "size": "basic"
     },
-    "worker": {
+    "worker3": {
       "quantity": 1,
       "size": "basic"
     },
-    "worker": {
+    "worker4": {
       "quantity": 1,
       "size": "basic"
     },
-    "worker": {
+    "worker5": {
       "quantity": 1,
       "size": "basic"
     },
-    "worker": {
+    "worker6": {
       "quantity": 1,
       "size": "basic"
     },
-    "worker": {
+    "worker7": {
       "quantity": 1,
       "size": "basic"
     },
-    "worker": {
+    "worker8": {
       "quantity": 1,
       "size": "basic"
     },
-    "worker": {
+    "worker9": {
       "quantity": 1,
       "size": "basic"
     },
-    "worker": {
+    "worker0": {
       "quantity": 1,
       "size": "basic"
     }
