@@ -9,5 +9,10 @@
       "size": "standard-2x"
     }
   },
-  "environments": {}
+  "env": {
+    "MANAGER_URL": {
+      "description": "The URL of the Nexus Manager application.",
+      "required": true
+    }
+  }
 }
