@@ -104,7 +104,7 @@ while kill -0 $PROVER_PID >/dev/null 2>&1; do
     # Send Heartbeat
     HEARTBEAT_RESPONSE=$(curl -s -X POST "$MANAGER_URL/heartbeat" \
         -H "Content-Type: application/json" \
-        -d "{\"node_id\": \"$NODE_ID\", \"wallet\": \"$WALLET\", \"tasks\": $TASKS_COMPLETED}")
+        -d "{\"worker_id\": \"$WORKER_ID\", \"node_id\": \"$NODE_ID\", \"wallet\": \"$WALLET\", \"tasks\": $TASKS_COMPLETED}")
 
     STATUS=$(echo "$HEARTBEAT_RESPONSE" | grep -o '"status":"[^"]*' | cut -d'"' -f4)
 
