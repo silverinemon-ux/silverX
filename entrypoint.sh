@@ -1,100 +1,119 @@
 #!/bin/bash
 set -e
 
-WALLETS=(
-    "0xd32adD1c7d37FE9789e630D640D74DB94aOc3Db2"
-    # "0xAnotherWalletAddress..."
-)
+# Configuration
+# Set this to your Heroku Manager App URL via Config Vars
+MANAGER_URL="$MANAGER_URL"
 
-NODE_IDS=(
-    "37356067"
-    "37385539"
-    "37356068"
-    "37308044"
-    "37308046"
-    "37308047"
-    "37308051"
-    "37308056"
-    "37308076"
-    "37308119"
-    "37337426"
-    "37337427"
-    "37337432"
-    "37337434"
-    "37337436"
-    "37337449"
-    "37337456"
-    "37337467"
-    "37337507"
-    "37337509"
-    "37356024"
-    "37356028"
-    "37356029"
-    "37356033"
-    "37356034"
-    "37356069"
-    "37385497"
-    "37385505"
-    "37385507"
-    "37385516"
-    "37385534"
-    "37385540"
-    "37385570"
-    "37385572"
-    "37385573"
-    "37415179"
-    "37415181"
-    "37415182"
-    "37415193"
-    "37415203"
-    "37443569"
-    "37443577"
-    "37443579"
-    "37443580"
-    "37443584"
-    "37443644"
-)
-
-echo "🎲 Initializing Random Selection..."
-
-if [ ${#WALLETS[@]} -gt 0 ]; then
-    RANDOM_WALLET_INDEX=$(( RANDOM % ${#WALLETS[@]} ))
-    CURRENT_WALLET=${WALLETS[$RANDOM_WALLET_INDEX]}
-    echo "💰 Selected Wallet: $CURRENT_WALLET"
-else
-    echo "❌ Error: No wallets defined in WALLETS array."
+if [ -z "$MANAGER_URL" ]; then
+    echo "❌ Error: MANAGER_URL not set."
     exit 1
 fi
 
-if [ ${#NODE_IDS[@]} -gt 0 ]; then
-    RANDOM_NODE_INDEX=$(( RANDOM % ${#NODE_IDS[@]} ))
-    CURRENT_NODE_ID=${NODE_IDS[$RANDOM_NODE_INDEX]}
-    echo "🆔 Selected Node ID: $CURRENT_NODE_ID"
+# Identify the worker, persisting the ID across restarts
+CONFIG_DIR="$HOME/.nexus_worker"
+CONFIG_FILE="$CONFIG_DIR/worker.conf"
+LOG_FILE="$CONFIG_DIR/prover.log"
+mkdir -p "$CONFIG_DIR"
+
+if [ -f "$CONFIG_FILE" ]; then
+    # Source the file to get WORKER_ID
+    source "$CONFIG_FILE"
+    echo "✅ Found existing Worker ID: $WORKER_ID"
 else
-    echo "⚠️ No pre-defined Node IDs found. A new one will be generated."
-    CURRENT_NODE_ID=""
+    # Generate a new UUID for the worker and save it
+    WORKER_ID=$(cat /proc/sys/kernel/random/uuid)
+    echo "WORKER_ID=$WORKER_ID" > "$CONFIG_FILE"
+    echo "✨ Generated new Worker ID: $WORKER_ID"
 fi
 
-mkdir -p $HOME/.nexus
+# 1. Ask Manager for an assignment (Node ID and Wallet)
+echo "📞 Requesting assignment from manager..."
+RESPONSE=$(curl -s -X POST "$MANAGER_URL/assign" \
+    -H "Content-Type: application/json" \
+    -d "{\"worker_id\": \"$WORKER_ID\"}")
 
-echo "👤 Ensuring user is registered..."
-nexus-cli register-user --wallet-address "$CURRENT_WALLET" > /dev/null 2>&1 || true
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Failed to contact manager at '$MANAGER_URL'. Is it running and accessible?"
+    exit 1
+fi
 
-# 5. Configure Node Identity
-if [ -n "$CURRENT_NODE_ID" ]; then
-    echo "⚙️  Writing config for Node ID: $CURRENT_NODE_ID"
-    cat <<EOF > $HOME/.nexus/config.json
+# Parse Node ID and Wallet from the JSON response
+NODE_ID=$(echo "$RESPONSE" | grep -o '"node_id":"[^"]*' | cut -d'"' -f4)
+WALLET=$(echo "$RESPONSE" | grep -o '"wallet":"[^"]*' | cut -d'"' -f4)
+
+if [ -z "$NODE_ID" ] || [ "$NODE_ID" == "null" ] || [ -z "$WALLET" ] || [ "$WALLET" == "null" ]; then
+    echo "❌ Failed to get assignment from manager. Response: $RESPONSE"
+    exit 1
+fi
+
+echo "✅ Assigned Node ID: $NODE_ID"
+echo "💰 Assigned Wallet: $WALLET"
+
+# 2. Setup Nexus Config
+mkdir -p "$HOME/.nexus"
+
+# 3. Create config.json with the assigned Node ID and Wallet
+# This replaces the old register-node and register-user flow.
+echo "📝 Creating Nexus config file..."
+cat > "$HOME/.nexus/config.json" << EOL
 {
   "user_id": "generated-by-entrypoint",
-  "wallet_address": "$CURRENT_WALLET",
-  "node_id": "$CURRENT_NODE_ID",
+  "node_id": "$NODE_ID",
+  "wallet_address": "$WALLET",
   "environment": "production"
 }
-EOF
-else
-    echo "jg️ Registering NEW random Node ID..."
-    nexus-cli register-node
+EOL
+
+# 4. Start Proving
+echo "⛏️ Starting Prover..."
+touch "$LOG_FILE" # Ensure log file exists for tail
+
+# Stream the logs to stdout in the background
+tail -f "$LOG_FILE" &
+TAIL_PID=$!
+
+# When the script exits, kill the tail process
+trap "echo '🛑 Halting log stream...'; kill $TAIL_PID 2>/dev/null" EXIT
+
+nexus-cli start --headless --max-difficulty large >> "$LOG_FILE" 2>&1 &
+PROVER_PID=$!
+
+# Give it a moment to start up or fail
+sleep 3
+
+# Check if the prover process is still alive
+if ! kill -0 $PROVER_PID >/dev/null 2>&1; then
+    echo "❌ Error: The nexus-cli prover failed to start. See logs above for details."
+    exit 1
 fi
 
-echo "⛏️ Starting Prover..."
-exec nexus-cli start --headless --max-difficulty large
+# 5. Heartbeat Loop
+echo "💓 Heartbeat service active..."
+TASKS_COMPLETED=0
+
+while kill -0 $PROVER_PID >/dev/null 2>&1; do
+    # Count tasks
+    CURRENT_TASKS=$(grep -c "Proof submitted" "$LOG_FILE" || true)
+    
+    if [ "$CURRENT_TASKS" -ne "$TASKS_COMPLETED" ]; then
+        echo "📈 Tasks: $CURRENT_TASKS"
+        TASKS_COMPLETED=$CURRENT_TASKS
+    fi
+
+    # Send Heartbeat
+    HEARTBEAT_RESPONSE=$(curl -s -X POST "$MANAGER_URL/heartbeat" \
+        -H "Content-Type: application/json" \
+        -d "{\"node_id\": \"$NODE_ID\", \"wallet\": \"$WALLET\", \"tasks\": $TASKS_COMPLETED}")
+
+    STATUS=$(echo "$HEARTBEAT_RESPONSE" | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+
+    if [ "$STATUS" == "re-register" ]; then
+        echo "⚠️ Manager requested re-registration. Exiting to restart."
+        break # Exit the while loop
+    fi
+
+    sleep 30
+done
+
+echo "Prover process has ended. Exiting."
